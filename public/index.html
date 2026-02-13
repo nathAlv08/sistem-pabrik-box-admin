@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Sistem Pabrik Box</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style> 
+        .item-box { border: 1px dashed #ccc; padding: 15px; margin-bottom: 15px; background-color: #fdfdfd; border-radius: 8px;} 
+    </style>
+</head>
+<body class="bg-light">
+
+<div class="container-fluid mt-4 px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-primary">📦 Dashboard Produksi Pabrik Box</h2>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-5">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-dark text-white">Input DO Baru</div>
+                <div class="card-body">
+                    <form id="formOrder">
+                        <h6 class="text-secondary fw-bold">Data Pelanggan</h6>
+                        <div class="mb-2"><label>Nama PT</label><input type="text" id="nama_pt" class="form-control" placeholder="Misal: PT Indonesia Stanley" required></div>
+                        <div class="mb-3"><label>Alamat Kirim</label><input type="text" id="alamat_pt" class="form-control" placeholder="Misal: Cikupa" required></div>
+                        <hr>
+
+                        <h6 class="text-secondary fw-bold">Data Order (Header)</h6>
+                        <div class="row mb-3">
+                            <div class="col-6"><label>No PO</label><input type="text" id="no_po" class="form-control" required></div>
+                            <div class="col-6"><label>Prioritas</label>
+                                <select id="prioritas" class="form-select">
+                                    <option value="Normal">Normal</option>
+                                    <option value="Urgent">Urgent (Segera)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <hr>
+                        
+                        <div id="itemsContainer">
+                            <div class="item-box" id="item_1">
+                                <h6 class="text-secondary fw-bold">Barang #1</h6>
+                                <div class="mb-2"><label>Nama Barang</label><input type="text" id="nama_1" class="form-control" required></div>
+                                <div class="row mb-2">
+                                    <div class="col-6"><label>Qty Order</label><input type="number" id="qty_1" class="form-control" required></div>
+                                    <div class="col-6"><label>Rasio Out (Bahan:Box)</label><input type="number" id="rasio_1" class="form-control" value="1" required></div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-4"><label>P (mm)</label><input type="number" id="p_1" class="form-control" required></div>
+                                    <div class="col-4"><label>L (mm)</label><input type="number" id="l_1" class="form-control" required></div>
+                                    <div class="col-4"><label>T (mm)</label><input type="number" id="t_1" class="form-control" required></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn btn-sm btn-outline-secondary w-100 mb-3" onclick="tambahItemForm()">+ Tambah Barang Lagi ke DO Ini</button>
+                        
+                        <button type="submit" class="btn btn-primary w-100 fw-bold fs-5">Simpan DO & Hitung Bahan</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-7">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">Daftar Surat Jalan / DO</div>
+                <div class="card-body p-0" style="overflow-x: auto;">
+                    <table class="table table-bordered table-striped m-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>No PO (DO)</th>
+                                <th>Nama PT</th>
+                                <th>Jml Barang</th>
+                                <th>Prioritas</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelReport"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let itemCount = 1;
+
+    // Fungsi Tambah Form Item Baru
+    function tambahItemForm() {
+        itemCount++;
+        const html = `
+            <div class="item-box mt-2" id="item_${itemCount}">
+                <h6 class="text-secondary fw-bold">Barang #${itemCount}</h6>
+                <div class="mb-2"><label>Nama Barang</label><input type="text" id="nama_${itemCount}" class="form-control" required></div>
+                <div class="row mb-2">
+                    <div class="col-6"><label>Qty Order</label><input type="number" id="qty_${itemCount}" class="form-control" required></div>
+                    <div class="col-6"><label>Rasio Out</label><input type="number" id="rasio_${itemCount}" class="form-control" value="1" required></div>
+                </div>
+                <div class="row">
+                    <div class="col-4"><label>P (mm)</label><input type="number" id="p_${itemCount}" class="form-control" required></div>
+                    <div class="col-4"><label>L (mm)</label><input type="number" id="l_${itemCount}" class="form-control" required></div>
+                    <div class="col-4"><label>T (mm)</label><input type="number" id="t_${itemCount}" class="form-control" required></div>
+                </div>
+            </div>
+        `;
+        document.getElementById('itemsContainer').insertAdjacentHTML('beforeend', html);
+    }
+
+    // Fungsi Simpan ke Backend
+    document.getElementById('formOrder').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const arrItems = [];
+        
+        for(let i = 1; i <= itemCount; i++) {
+            if(document.getElementById(`nama_${i}`)) {
+                arrItems.push({
+                    nama_barang: document.getElementById(`nama_${i}`).value,
+                    qty_order: parseInt(document.getElementById(`qty_${i}`).value),
+                    rasio_out: parseInt(document.getElementById(`rasio_${i}`).value),
+                    panjang_box: parseInt(document.getElementById(`p_${i}`).value),
+                    lebar_box: parseInt(document.getElementById(`l_${i}`).value),
+                    tinggi_box: parseInt(document.getElementById(`t_${i}`).value)
+                });
+            }
+        }
+
+        const payload = {
+            nama_perusahaan: document.getElementById('nama_pt').value,
+            alamat_kirim: document.getElementById('alamat_pt').value, 
+            no_po_customer: document.getElementById('no_po').value,
+            prioritas: document.getElementById('prioritas').value,
+            tipe_faktur: "PN",
+            items: arrItems
+        };
+
+        const response = await fetch('/api/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        if(result.status === 'success') {
+            alert('DO Berhasil Disimpan & Dihitung!');
+            itemCount = 1;
+            document.getElementById('itemsContainer').innerHTML = document.getElementById('item_1').outerHTML;
+            document.getElementById('formOrder').reset(); 
+            muatDataReport(); 
+        } else {
+            alert('Gagal menyimpan DO. Cek console log.');
+        }
+    });
+
+    // Fungsi Muat Data & Grouping per PO
+    async function muatDataReport() {
+        const response = await fetch('/api/orders');
+        const result = await response.json();
+        
+        const ordersGrouped = {};
+        result.data.forEach(row => {
+            if(!ordersGrouped[row.order_id]) {
+                ordersGrouped[row.order_id] = {
+                    order_id: row.order_id,
+                    no_po_customer: row.no_po_customer,
+                    nama_perusahaan: row.nama_perusahaan,
+                    alamat_kirim: row.alamat_kirim,
+                    tanggal_order: row.tanggal_order,
+                    prioritas: row.prioritas,
+                    tipe_faktur: row.tipe_faktur,
+                    items: []
+                };
+            }
+            ordersGrouped[row.order_id].items.push(row);
+        });
+
+        const tbody = document.getElementById('tabelReport');
+        tbody.innerHTML = ''; 
+
+        Object.values(ordersGrouped).forEach(order => {
+            const rowClass = order.prioritas === 'Urgent' ? 'table-danger' : '';
+            const dataPrint = encodeURIComponent(JSON.stringify(order));
+
+            const tr = `
+                <tr class="${rowClass}">
+                    <td><strong>${order.no_po_customer}</strong></td>
+                    <td>${order.nama_perusahaan}</td>
+                    <td><span class="badge bg-secondary">${order.items.length} Macam Barang</span></td>
+                    <td>${order.prioritas}</td>
+                    <td>
+                        <button onclick="cetakDOPDF('${dataPrint}')" class="btn btn-sm btn-dark">🖨️ Cetak DO Utuh</button>
+                    </td>
+                </tr>
+            `;
+            tbody.innerHTML += tr;
+        });
+    }
+
+    // Fungsi Cetak DO (Format Kertas Asli)
+    function cetakDOPDF(dataString) {
+        const order = JSON.parse(decodeURIComponent(dataString));
+        const printWindow = window.open('', '_blank'); 
+        
+        let itemRows = '';
+        order.items.forEach((item, index) => {
+            const sheetP = item.ukuran_sheet_panjang / 10;
+            const sheetL = item.ukuran_sheet_lebar / 10;
+            
+            itemRows += `
+                <tr>
+                    <td rowspan="2" width="5%">${index + 1}</td>
+                    <td style="text-align:left;" width="35%">${item.nama_barang}</td>
+                    <td width="25%">${item.panjang_box} x ${item.lebar_box} x ${item.tinggi_box}</td>
+                    <td width="15%">Stock</td>
+                    <td style="font-weight:bold;" width="10%">${item.total_kebutuhan_sheet} Lbr</td>
+                    <td rowspan="2" width="10%"></td>
+                </tr>
+                <tr>
+                    <td>${item.qty_order} pcs</td>
+                    <td>K125/M/K125 B</td>
+                    <td>${sheetP} x ${sheetL}</td>
+                    <td>${item.rasio_out} ; 1</td>
+                </tr>
+            `;
+        });
+
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Cetak DO - ${order.nama_perusahaan}</title>
+                <style>
+                    body { font-family: 'Times New Roman', serif; padding: 20px; font-size: 14px; }
+                    .header-tabel { width: 100%; margin-bottom: 20px; font-size: 14px; }
+                    .header-tabel td { padding: 4px; }
+                    table.do-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+                    table.do-table th, table.do-table td { border: 1px solid black; padding: 6px; text-align: center; }
+                    @media print { button { display: none; } } 
+                </style>
+            </head>
+            <body>
+                <button onclick="window.print()" style="padding: 10px; margin-bottom: 20px; cursor: pointer; background: #000; color: #fff; border:none; border-radius:4px;">🖨️ Tekan untuk Print DO</button>
+                <table class="header-tabel">
+                    <tr>
+                        <td width="20%">NAMA PELANGGAN</td><td width="45%">: <strong>${order.nama_perusahaan}</strong></td>
+                        <td width="15%" style="text-align:right">No DO</td><td width="20%">: DO-2026-${order.order_id} (${order.tipe_faktur})</td>
+                    </tr>
+                    <tr>
+                        <td>Nomor PO</td><td>: ${order.no_po_customer}</td>
+                        <td style="text-align:right">Tgl</td><td>: ${new Date(order.tanggal_order).toLocaleDateString('id-ID')}</td>
+                    </tr>
+                    <tr>
+                        <td>Alamat Kirim</td><td>: ${order.alamat_kirim}</td>
+                        <td></td><td></td>
+                    </tr>
+                    <tr>
+                        <td>Tgl yang Dikehendaki</td><td>: ${order.prioritas === 'Urgent' ? 'Segera' : 'Normal'}</td>
+                        <td></td><td></td>
+                    </tr>
+                </table>
+
+                <table class="do-table">
+                    <tr>
+                        <th rowspan="2">No</th>
+                        <th>Nama Barang</th>
+                        <th>Ukuran Box</th>
+                        <th>Bhn Dari</th>
+                        <th>Jml Bhn</th>
+                        <th rowspan="2">Ket</th>
+                    </tr>
+                    <tr>
+                        <th>Jumlah</th>
+                        <th>Bahan</th>
+                        <th>Uk. Sheet</th>
+                        <th>:</th>
+                    </tr>
+                    ${itemRows}
+                    <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td></tr>
+                    <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td></tr>
+                </table>
+                <p style="margin-top: 20px; font-weight: bold;">KETERANGAN DO :</p>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+    }
+
+    muatDataReport();
+</script>
+</body>
+</html>
